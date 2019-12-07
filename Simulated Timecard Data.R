@@ -89,8 +89,8 @@ Start.Hours.dt<-ymd_hm(paste("2010-01-01", Start.Hours.hm))
 df<-data.frame(Start.Hours, Start.Hours.hm, Start.Hours.dt) %>% 
   arrange(Start.Hours.dt) %>% 
   mutate(Shift.Type=ifelse(Start.Hours<13, "AM.Shift", "PM.Shift"),
-         Employee.ID=ifelse(Shift.Type=="AM.Shift", "_000001", "UNKNOWN"),
-         Employee.ID=ifelse(Shift.Type=="PM.Shift", "_000002", Employee.ID),
+         Person.ID=ifelse(Shift.Type=="AM.Shift", "_000001", "UNKNOWN"),
+         Person.ID=ifelse(Shift.Type=="PM.Shift", "_000002", Person.ID),
          Employee.Name=NA,
          Employee.Name=ifelse(Shift.Type=="AM.Shift", "Early Start Employee", Employee.Name),
          Employee.Name=ifelse(Shift.Type=="PM.Shift", "Late Start Employee", Employee.Name)
@@ -208,7 +208,7 @@ df<-df %>%
          In.Actual.dt3=Out.Actual.dt2+minutes(as.integer(df$Meal.Break.2.MINS)),
          Out.Actual.dt3=In.Actual.dt3+ minutes(as.integer(Instance.Length.3.MINS)) 
          ) %>% 
-  select(Employee.ID, 
+  select(Person.ID, 
          contains("dt1"), Instance.Length.1.MINS, Meal.Break.1.MINS,
          contains("dt2"), Instance.Length.2.MINS, Meal.Break.2.MINS,
          contains("dt3"), Instance.Length.3.MINS,
@@ -225,73 +225,23 @@ df<-df %>%
 # Timecard Analysis --------------------------------------------------------------------------------
 
 tc.TEMP1<-df %>% 
-  select(Employee.ID, contains("dt1")) %>% 
+  select(Person.ID, contains("dt1")) %>% 
   rename(In.Actual.dt=In.Actual.dt1,
          Out.Actual.dt=Out.Actual.dt1)
 
 tc.TEMP2<-df %>% 
-  select(Employee.ID, contains("dt2")) %>% 
+  select(Person.ID, contains("dt2")) %>% 
   rename(In.Actual.dt=In.Actual.dt2,
          Out.Actual.dt=Out.Actual.dt2)
 
 tc.TEMP3<-df %>% 
-  select(Employee.ID, contains("dt3")) %>% 
+  select(Person.ID, contains("dt3")) %>% 
   rename(In.Actual.dt=In.Actual.dt3,
          Out.Actual.dt=Out.Actual.dt3)
 
 tc.TEMP<-full_join(tc.TEMP1, tc.TEMP2)
 tc.TEMP<-full_join(tc.TEMP, tc.TEMP3)
 
-tc<-tc.TEMP %>% 
-  arrange(Employee.ID, In.Actual.dt) %>% 
-  group_by(Employee.ID) %>% 
-  mutate(Gap.Next=as.numeric(difftime(lead(In.Actual.dt), Out.Actual.dt, units="hours")),
-         Gap.Next=ifelse(is.na(Gap.Next), 123456, Gap.Next),
-         Gap.Last=as.numeric(difftime(In.Actual.dt, lag(Out.Actual.dt), units="hours")) ,
-         Gap.Last=ifelse(is.na(Gap.Last), 123456, Gap.Last))
 
-ResetLength<-4
-
-tc<-tc %>% 
-  group_by(Employee.ID) %>% 
-  mutate(Instance.Length=as.numeric(difftime(Out.Actual.dt, In.Actual.dt, units="hours"))) %>% 
-  mutate(Shift.Start=ifelseC(Gap.Next<ResetLength & Gap.Last>ResetLength, In.Actual.dt, NA),
-         Shift.Start=fillNA(Shift.Start) ) %>% 
-  group_by(Employee.ID, Shift.Start) %>% 
-  mutate(Shift.End=max(Out.Actual.dt),
-         Shift.Length=as.numeric(difftime(Shift.End, Shift.Start, units="hours")) )
-  
-
-
-
-
-
-
-glimpse(tc)
-stop()
-# *************** ----------------------------------------------------------------------------------
-# Experiment to make more Employees ----------------------------------------------------------------
-# Employee IDs -------------------------------------------------------------------------------------
-
-
-Employee.Count<-250
-
-AM.Employee.IDs<-seq(1, Employee.Count/2, 1) %>% 
-  str_pad(., width = 6, pad="0") %>% 
-  paste0("_", .)
-
-PM.Employee.IDs<-seq((Employee.Count/2)+1, Employee.Count, 1) %>% 
-  str_pad(., width = 6, pad="0") %>% 
-  paste0("_", .)
-
-Employee.ID<-append(AM.Employee.IDs, PM.Employee.IDs) %>% 
-  unique(.)
-
-
-##TODO: Use the 250 simulated IDs from above to cross join 125 into the AM & PM shift EACH!
-##TODO: THEN for each employee on each day & each clocking instance (+-)15min on every Instance length
-## IF done correctly this will allow for the simulation of a class with approximately normal schedules
-### with some reasonable variation for each person throughout the dataset.
-
-
+tc<-tc.TEMP
 
