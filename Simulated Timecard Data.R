@@ -14,49 +14,43 @@ TZ <- "GMT"                #
 set.seed(1776)             #
 
 
-
-# Packages Enablement -----------------------------------------------------
-
-require("checkpoint")
-#checkpoint("2019-11-01")
-
-pkgs<-rev(c("dplyr", "stringr", "tidyr", "lubridate",
-            "data.table",
-            "readtext",
-            "tictoc",
-            "caret", ## for modeling ML
-            "ggplot2",
-            "readxl", 
-            "openxlsx",
-            "parallel",
-            "devtools",
-            "beepr")) #Reversed for 1st package priority
-
-as.data.frame(lapply(pkgs, require, character.only=TRUE))
-#as.data.frame(lapply(pkgs, install.packages))
-
-sessionInfo()
-
-
-# File Name ---------------------------------------------------------------
-########################################################################!
-####
-
-#File.Name
-File.Name<-"Simulated Timecard Data.R"
-#Date Version
-Version<-"2019-11-28" #RECALL: use ctrl+f to replace this across the script
-
+# dir.create() ------------------------------------------------------
 #Working DIrectory
 WD<-file.path("Projects", "Simulated Data", "Simulated-Timecard-Data")
 
-# dir.create() ------------------------------------------------------
 #Sim.Data - Folder Generation
 dir.create(file.path(WD, "Sim.Data"), showWarnings = F)
 WD.Sim.Data<-file.path(WD, "Sim.Data")
 
 ####
 ####
+
+# Packages Enablement -----------------------------------------------------
+
+require("checkpoint")
+checkpoint("2019-12-07", project=WD, forceProject = TRUE)
+setSnapshot("2019-12-07")
+
+pkgs<-rev(c("dplyr",        ## for data handling
+            "stringr",      ## for strings
+            "tidyr",        ## for data strunctures
+            "lubridate",    ## for date handling
+            "data.table",   ## for data structures and reading/writing
+            "ggplot2",      ## for internal visualitions
+            "plotly",       ## for interactive visualizations
+            "readxl",       ## for ingesting xlsx files
+            "openxlsx",     ## for exporting opjects to a finalized excel template
+            "parallel",     ## for parallel process computing
+            #"readtext",     ## for PDF extraction
+            #"caret",       ## for machine learning modeling
+            "devtools",     ## for certain functions lacking in base
+            "tictoc",       ## for tracking calculation times
+            "beepr" ))      ## for placing audio chimes to signal completed calculations
+
+#as.data.frame(lapply(pkgs, install.packages))
+as.data.frame(lapply(pkgs, require, character.only=TRUE)) #Reversed for 1st package priority
+
+sessionInfo()
 
 
 # Custom Functions ------------------------------------------------------------------
@@ -244,4 +238,9 @@ tc.TEMP<-full_join(tc.TEMP, tc.TEMP3)
 
 
 tc<-tc.TEMP
+
+fwrite.DF.to.csv.as.char(tc,
+                         file.path(WD.Sim.Data,
+                                "Simulated Timecards for 2 Employees across 2010-01 to 2020-03.csv"))
+
 
