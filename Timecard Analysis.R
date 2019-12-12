@@ -87,9 +87,10 @@ ResetLength<-c(4)                ## This is the minimum number of HOURS that ela
 False.Positive.Clock<-c(0)       ## If the tmins b/w a time pair to the next THEN it is not real
 Client.PP.Gap<-"Biweekly"     ##Should be either 'Weekly' or 'Biweekly'
 
-Meal.Req.Strictness<-c("Strict") ##Should be "Strict(>)" or "Relaxed(>=)"
-Meal.1.Required.Time<-5
-Meal.2.Required.Time<-10
+#Meal.Req.Strictness<-c("Strict") ##Should be "Strict(>)" or "Relaxed(>=)"
+Meal.1.Req<-5
+Meal.2.Req<-10
+Meal.Break.Req.MINS<-30
 
 ##These variables should be chosen from the below calendar of 2006
 First.Work.Week.DATE<-ymd("2006-01-01")     ## This should be found in payroll (pr) or emails
@@ -119,20 +120,20 @@ if (is.null(False.Positive.Clock)==T |
 if (Client.PP.Gap %in% c("Weekly", "Biweekly")==F)
   warning("'Client.PP.Gap' must be either: 'Weekly' or 'Biweekly'", call. = FALSE)
 
-if (Meal.Req.Strictness %in% c("Strict", "Relaxed")==F)
-  warning("'Meal.Req.Strictness' must be either: 'Strict' or 'Relaxed'", call. = FALSE)
+## if (Meal.Req.Strictness %in% c("Strict", "Relaxed")==F)
+##   warning("'Meal.Req.Strictness' must be either: 'Strict' or 'Relaxed'", call. = FALSE)
 
 
 
-if (is.null(Meal.1.Required.Time)==T | 
-    is.na(Meal.1.Required.Time)==T | 
-    !is.numeric(Meal.1.Required.Time)==T) 
-  warning("Meal.1.Required.Time must be of class: numeric")
+if (is.null(Meal.1.Req)==T | 
+    is.na(Meal.1.Req)==T | 
+    !is.numeric(Meal.1.Req)==T) 
+  warning("Meal.1.Req must be of class: numeric")
 
-if (is.null(Meal.2.Required.Time)==T | 
-    is.na(Meal.2.Required.Time)==T | 
-    !is.numeric(Meal.2.Required.Time)==T) 
-  warning("Meal.2.Required.Time must be of class: numeric")
+if (is.null(Meal.2.Req)==T | 
+    is.na(Meal.2.Req)==T | 
+    !is.numeric(Meal.2.Req)==T) 
+  warning("Meal.2.Req must be of class: numeric")
 
 
 
@@ -198,8 +199,8 @@ WorkWeekSpacer<-data.table(seq.Date(min(date(tc$In.Actual.dt))-days(30), ymd("20
       mutate(In.Actual.dt=ymd_hms(paste(date(Out.Actual.dt), "00:00:00.01")) )
   
   
-  glimpse(tc.Overnights.1)
-  glimpse(tc.Overnights.2)
+  #glimpse(tc.Overnights.1)
+  #glimpse(tc.Overnights.2)
   
   tc.Overnights<-full_join(tc.Overnights.1, tc.Overnights.2) ##Join and then nullify these objects
     #tc.Overnights.1<-NULL
@@ -209,7 +210,11 @@ WorkWeekSpacer<-data.table(seq.Date(min(date(tc$In.Actual.dt))-days(30), ymd("20
     mutate(Date=date(In.Actual.dt)) %>% 
     select(Person.ID, Date, contains(".dt"))
   
+
+# *** WW Spacer --------------------------------------------------------------------------------
+    tc<-left_join(tc, WorkWeekSpacer)
   
+
 # * Gap.Next ---------------------------------------------------------------------------------------
 tc<-tc %>% 
     ungroup() %>% 
@@ -231,6 +236,8 @@ tc<-tc %>%
            Cluster.Start=fillNA(Cluster.Start) ) %>% 
     group_by(Person.ID, Cluster.Start) %>% 
     mutate(Cluster.End=max(Out.Actual.dt),
+           Pair.Order=row_number(),
+           Cluster.Accum=cumsum(Pair.Length),
            Cluster.Length=as.numeric(difftime(Cluster.End, Cluster.Start, units="hours")),
            Next.Break.Length.MINS=ifelse(Gap.Next>0 & Gap.Next<ResetLength, Gap.Next*60, NA) ) %>% 
     ungroup() %>% 
@@ -239,42 +246,90 @@ tc<-tc %>%
 
 
 
-# * SOL WWs & PPs -------------------------------------------------------------------------
-tc<-left_join(tc, WorkWeekSpacer) %>% 
-    ungroup() %>% 
-    mutate(In.4yr.SOL=ifelse(Date>date(Filing.Date)-years(4), 1, 0),
-           WW.4yr.SOL=ifelseC(In.4yr.SOL==1, Start.Weekly.WW, NA),
-           PP.4yr.SOL=ifelseC(In.4yr.SOL==1 & Client.PP.Gap=="Weekly", Start.Weekly.WW, NA),
-           PP.4yr.SOL=ifelseC(In.4yr.SOL==1 & Client.PP.Gap!="Weekly", Start.Biweekly.WW, PP.4yr.SOL),
-           
-           In.3yr.SOL=ifelse(Date>date(Filing.Date)-years(3), 1, 0),
-           WW.3yr.SOL=ifelseC(In.3yr.SOL==1, Start.Weekly.WW, NA),
-           PP.3yr.SOL=ifelseC(In.3yr.SOL==1 & Client.PP.Gap=="Weekly", Start.Weekly.WW, NA),
-           PP.3yr.SOL=ifelseC(In.3yr.SOL==1 & Client.PP.Gap!="Weekly", Start.Biweekly.WW, PP.3yr.SOL),
-           
-           In.2yr.SOL=ifelse(Date>date(Filing.Date)-years(2), 1, 0),
-           WW.2yr.SOL=ifelseC(In.2yr.SOL==1, Start.Weekly.WW, NA),
-           PP.2yr.SOL=ifelseC(In.2yr.SOL==1 & Client.PP.Gap=="Weekly", Start.Weekly.WW, NA),
-           PP.2yr.SOL=ifelseC(In.2yr.SOL==1 & Client.PP.Gap!="Weekly", Start.Biweekly.WW, PP.2yr.SOL),
-           
-           In.1yr.SOL=ifelse(Date>date(Filing.Date)-years(1), 1, 0),
-           WW.1yr.SOL=ifelseC(In.1yr.SOL==1, Start.Weekly.WW, NA),
-           PP.1yr.SOL=ifelseC(In.1yr.SOL==1 & Client.PP.Gap=="Weekly", Start.Weekly.WW, NA),
-           PP.1yr.SOL=ifelseC(In.1yr.SOL==1 & Client.PP.Gap!="Weekly", Start.Biweekly.WW, PP.1yr.SOL),
-           
-           In.PAGA.SOL=ifelse(Date>date(Filing.Date)-years(1), 1, 0),
-           WW.PAGA.SOL=ifelseC(In.PAGA.SOL==1, Start.Weekly.WW, NA),
-           PP.PAGA.SOL=ifelseC(In.PAGA.SOL==1 & Client.PP.Gap=="Weekly", Start.Weekly.WW, NA),
-           PP.PAGA.SOL=ifelseC(In.PAGA.SOL==1 & Client.PP.Gap!="Weekly", Start.Biweekly.WW, PP.PAGA.SOL)
-           ) %>% 
-    select(-contains("In.*SOL"), -contains("WW.*SOL"), -contains("PP.*SOL"),
-           everything(),
-           contains("In.*SOL"), contains("WW.*SOL"), contains("PP.*SOL") )
+
   
   
-  glimpse(tc)
+
+# * Meal Calcs -------------------------------------------------------------------------------------
+# ** Late & Short ----------------------------------------------------------------------------------
+  
+tc2<-tc %>% 
+  ungroup() %>% 
+  mutate(##Meal 1 Calculations
+         Meal.1.Required=ifelse(Cluster.Length>Meal.1.Req, 1, 0),
+         Meal.1.Late.MINS=ifelse(Cluster.Accum>Meal.1.Req & !is.na(Next.Break.Length.MINS), 
+                                 (Cluster.Accum-Meal.1.Req)*60, 
+                                 0),
+         Meal.1.Short.MINS=ifelse(Next.Break.Length.MINS<=Meal.Break.Req.MINS, 
+                                  Meal.Break.Req.MINS-Next.Break.Length.MINS,
+                                  0),
+         Meal.1.Compliant=ifelse(Meal.1.Required==1 & Meal.1.Late.MINS==0 & Meal.1.Short.MINS==0, 1, 0),
+         
+         ## Meal 2 Calculations
+         Meal.2.Required=ifelse(Cluster.Length>Meal.2.Req, 1, 0),
+         Meal.2.Late.MINS=ifelse(Cluster.Accum>Meal.2.Req & !is.na(Next.Break.Length.MINS), 
+                                 (Cluster.Accum-Meal.2.Req)*60, 
+                                 0),
+         Meal.2.Short.MINS=ifelse(Next.Break.Length.MINS<=Meal.Break.Req.MINS, 
+                                  Meal.Break.Req.MINS-Next.Break.Length.MINS,
+                                  0),
+         Meal.2.Compliant=ifelse(Meal.2.Required==1 & Meal.2.Late.MINS==0 & Meal.2.Short.MINS==0, 1, 0)
+         )
   
   
+  table(tc2$Pair.Length==0, tc$Pair.Order)
+  qplot(tc2$Pair.Length)
+  stop("Please revise pait length==0's frequency. Currently it represents 25% of the pairs!!")
+  
+# ** Meal Reqs -------------------------------------------------------------------------------------
+
+  
+
+glimpse(tc2)
+
+beep(2)
+stop()
+
+
+
+
+# * SoL Calcs ------------------------------------------------------------------------------------
+tc<-tc %>% 
+  ungroup() %>% 
+  mutate(In.4yr.SOL=ifelse(Date>date(Filing.Date)-years(4), 1, 0),
+         WW.4yr.SOL=ifelseC(In.4yr.SOL==1, Start.Weekly.WW, NA),
+         PP.4yr.SOL=ifelseC(In.4yr.SOL==1 & Client.PP.Gap=="Weekly", Start.Weekly.WW, NA),
+         PP.4yr.SOL=ifelseC(In.4yr.SOL==1 & Client.PP.Gap!="Weekly", Start.Biweekly.WW, PP.4yr.SOL),
+         
+         In.3yr.SOL=ifelse(Date>date(Filing.Date)-years(3), 1, 0),
+         WW.3yr.SOL=ifelseC(In.3yr.SOL==1, Start.Weekly.WW, NA),
+         PP.3yr.SOL=ifelseC(In.3yr.SOL==1 & Client.PP.Gap=="Weekly", Start.Weekly.WW, NA),
+         PP.3yr.SOL=ifelseC(In.3yr.SOL==1 & Client.PP.Gap!="Weekly", Start.Biweekly.WW, PP.3yr.SOL),
+         
+         In.2yr.SOL=ifelse(Date>date(Filing.Date)-years(2), 1, 0),
+         WW.2yr.SOL=ifelseC(In.2yr.SOL==1, Start.Weekly.WW, NA),
+         PP.2yr.SOL=ifelseC(In.2yr.SOL==1 & Client.PP.Gap=="Weekly", Start.Weekly.WW, NA),
+         PP.2yr.SOL=ifelseC(In.2yr.SOL==1 & Client.PP.Gap!="Weekly", Start.Biweekly.WW, PP.2yr.SOL),
+         
+         In.1yr.SOL=ifelse(Date>date(Filing.Date)-years(1), 1, 0),
+         WW.1yr.SOL=ifelseC(In.1yr.SOL==1, Start.Weekly.WW, NA),
+         PP.1yr.SOL=ifelseC(In.1yr.SOL==1 & Client.PP.Gap=="Weekly", Start.Weekly.WW, NA),
+         PP.1yr.SOL=ifelseC(In.1yr.SOL==1 & Client.PP.Gap!="Weekly", Start.Biweekly.WW, PP.1yr.SOL),
+         
+         In.PAGA.SOL=ifelse(Date>date(Filing.Date)-years(1), 1, 0),
+         WW.PAGA.SOL=ifelseC(In.PAGA.SOL==1, Start.Weekly.WW, NA),
+         PP.PAGA.SOL=ifelseC(In.PAGA.SOL==1 & Client.PP.Gap=="Weekly", Start.Weekly.WW, NA),
+         PP.PAGA.SOL=ifelseC(In.PAGA.SOL==1 & Client.PP.Gap!="Weekly", Start.Biweekly.WW, PP.PAGA.SOL)
+  ) %>% 
+  select(-contains("In.*SOL"), -contains("WW.*SOL"), -contains("PP.*SOL"),
+         everything(),
+         contains("In.*SOL"), contains("WW.*SOL"), contains("PP.*SOL") )
+
+table(tc$Person.ID, tc$In.4yr.SOL)
+table(tc$Person.ID, !is.na(tc$WW.4yr.SOL))
+table(tc$Person.ID, !is.na(tc$PP.4yr.SOL))
+
+
 ## tc %>%
 ##   group_by(Person.ID) %>% 
 ##   summarize(WW.4yr.SOL=uniqueN(WW.4yr.SOL, na.rm=TRUE),
@@ -291,14 +346,7 @@ tc<-left_join(tc, WorkWeekSpacer) %>%
 ##             
 ##             WW.PAGA.SOL=uniqueN(WW.PAGA.SOL, na.rm=TRUE),
 ##             PP.PAGA.SOL=uniqueN(PP.PAGA.SOL, na.rm=TRUE) )
-    
-  
-  
 
-glimpse(tc)
-
-beep(2)
-stop()
 
 ##TODO: make a pay period and work week apscer object
 ##TODO: Statute of limitations calculations (WW, PPs, & Within)
