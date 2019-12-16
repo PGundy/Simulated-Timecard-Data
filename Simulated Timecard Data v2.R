@@ -174,13 +174,17 @@ df<-df %>%
     
 
 # * Break Lengths ----------------------------------------------------------------------------------
+    
+    table(df$Instance.Length.1==0)
+    table(df$Instance.Length.2==0)
+    table(df$Instance.Length.3==0)
 
 df<-df %>% 
-      mutate(Meal.Break.1.MINS=ifelse(Instance.Length.1==0,
+      mutate(Meal.Break.1.MINS=ifelse(Instance.Length.1==0 & Instance.Length.2==0,
                                  0,
                                  rnorm(n(), mean=31, sd=3)),
-             Meal.Break.1.MINS=round(Meal.Break.1.MINS),
-             Meal.Break.2.MINS=ifelse(Instance.Length.2==0,
+             Meal.Break.1.MINS=floor(Meal.Break.1.MINS),
+             Meal.Break.2.MINS=ifelse(Instance.Length.2==0 & Instance.Length.3==0,
                                  0,
                                  rnorm(n(), mean=29, sd=3)),
              Meal.Break.2.MINS=ceiling(Meal.Break.2.MINS) )

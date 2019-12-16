@@ -237,12 +237,13 @@ tc<-tc %>%
     group_by(Person.ID, Cluster.Start) %>% 
     mutate(Cluster.End=max(Out.Actual.dt),
            Pair.Order=row_number(),
+           Pairs.Per.Cluster=n(),
            Cluster.Accum=cumsum(Pair.Length),
            Cluster.Length=as.numeric(difftime(Cluster.End, Cluster.Start, units="hours")),
            Next.Break.Length.MINS=ifelse(Gap.Next>0 & Gap.Next<ResetLength, Gap.Next*60, NA) ) %>% 
     ungroup() %>% 
     mutate(Cluster.Overnight=ifelse(date(Cluster.Start)!=date(Cluster.End), T, F),
-           False.Positive.Clock=ifelse(Gap.Next %in% False.Positive.Clock, 1, 0))
+           False.Positive.Clock=ifelse(Gap.Next %in% False.Positive.Clock, T, F))
 
 
 
@@ -252,8 +253,8 @@ tc<-tc %>%
 
 # * Meal Calcs -------------------------------------------------------------------------------------
 # ** Late & Short ----------------------------------------------------------------------------------
-  
-tc2<-tc %>% 
+
+tc<-tc %>% 
   ungroup() %>% 
   mutate(##Meal 1 Calculations
          Meal.1.Required=ifelse(Cluster.Length>Meal.1.Req, 1, 0),
@@ -263,7 +264,17 @@ tc2<-tc %>%
          Meal.1.Short.MINS=ifelse(Next.Break.Length.MINS<=Meal.Break.Req.MINS, 
                                   Meal.Break.Req.MINS-Next.Break.Length.MINS,
                                   0),
-         Meal.1.Compliant=ifelse(Meal.1.Required==1 & Meal.1.Late.MINS==0 & Meal.1.Short.MINS==0, 1, 0),
+         
+         Meal.1.LateShort.MINS=Meal.1.Late.MINS+Meal.1.Short.MINS,
+         
+         Meal.1.Compliant=ifelse(Meal.1.Required==1 & Next.Break.Length.MINS>=Meal.Break.Req.MINS &
+                                   Meal.1.Late.MINS==0 & Meal.1.Short.MINS==0, 1, 0),
+         
+         Meal.1.Length=ifelse(Meal.1.Compliant %in% c(0, 1) , Next.Break.Length.MINS, NA),
+          ## Note: Meal.1.Expected.Break expects M1 1/3 through a shift for natural fit
+         Meal.1.Expected.Break=ifelse(!is.na(Meal.1.Length),
+                                      round(abs(Cluster.Length*(1/3)-Cluster.Accum), 3),
+                                      NA),
          
          ## Meal 2 Calculations
          Meal.2.Required=ifelse(Cluster.Length>Meal.2.Req, 1, 0),
@@ -273,20 +284,104 @@ tc2<-tc %>%
          Meal.2.Short.MINS=ifelse(Next.Break.Length.MINS<=Meal.Break.Req.MINS, 
                                   Meal.Break.Req.MINS-Next.Break.Length.MINS,
                                   0),
-         Meal.2.Compliant=ifelse(Meal.2.Required==1 & Meal.2.Late.MINS==0 & Meal.2.Short.MINS==0, 1, 0)
-         )
+         Meal.2.LateShort.MINS=Meal.2.Late.MINS+Meal.2.Short.MINS,
+         
+         Meal.2.Compliant=ifelse(Meal.2.Required==1 & Next.Break.Length.MINS>=Meal.Break.Req.MINS &
+                                   Meal.2.Late.MINS==0 & Meal.2.Short.MINS==0, 1, 0),
+         Meal.2.Length=ifelse(Meal.2.Compliant==1, Next.Break.Length.MINS, NA),
+          ## Note: Meal.1.Expected.Break expects M2 1/3 through a shift for natural fit
+         Meal.2.Expected.Break=ifelse(!is.na(Meal.2.Length),
+                                      round(abs(Cluster.Length*(2/3)-Cluster.Accum), 3),
+                                      NA) )
   
-  
-  table(tc2$Pair.Length==0, tc$Pair.Order)
-  qplot(tc2$Pair.Length)
-  stop("Please revise pait length==0's frequency. Currently it represents 25% of the pairs!!")
-  
-# ** Meal Reqs -------------------------------------------------------------------------------------
 
+# Meal 1 Compliant ---------------------------------------------------------------------------------
+# * Ranking ---------------------------------------------------------------------------------------
+
+  tc.M1<- tc %>% ## Below arranges tc by the shift and orders by M1 compliance & expected
+    arrange(Person.ID, Cluster.Start, desc(Meal.1.Compliant), Meal.1.Expected.Break) %>% 
+    group_by(Person.ID, Cluster.Start) %>% 
+    mutate(Meal.1.Compliance.Ranking=ifelse(Meal.1.Compliant==1, row_number(), NA)) %>% 
+    arrange(Person.ID, Cluster.Start, Pair.Order) %>%
+    select(Person.ID, ends_with(".dt"), contains("Pair"), contains("Cluster"),
+           contains("Meal.1"), Next.Break.Length.MINS) 
+  
+  tc<-left_join(tc, tc.M1)
+    
+# Meal 2 Compliant ---------------------------------------------------------------------------------
+  # * Ranking ---------------------------------------------------------------------------------------
+  
+  tc.M2<- tc %>% 
+    arrange(Person.ID, Cluster.Start, desc(Meal.2.Compliant), Meal.2.Expected.Break) %>% 
+    group_by(Person.ID, Cluster.Start) %>% 
+    mutate(Meal.2.Compliance.Ranking=ifelse(Meal.2.Compliant==1 &
+                                    (Meal.1.Compliance.Ranking!=1 | ## Cannot be the same as M1
+                                       is.na(Meal.1.Compliance.Ranking)), ## Can be NA for M1 compliant
+                                            row_number(),
+                                            NA) ) %>% 
+    arrange(Person.ID, Cluster.Start, Pair.Order) %>%
+    select(Person.ID, ends_with(".dt"), contains("Pair"), contains("Cluster"),  
+           contains("Meal.2"), Next.Break.Length.MINS) 
+  
+  tc<-left_join(tc, tc.M2)
+  
   
 
-glimpse(tc2)
+# tc Reorder ---------------------------------------------------------------------------------------
 
+tc<-tc %>% select(everything(), ##Needed in order to keep 
+                  -contains("Meal.1"), contains("Meal.1"), 
+                  -contains("Meal.2"), contains("Meal.2"))
+  
+  glimpse(tc)
+  
+  
+  ##TODO: Address bug with negative tc$Gap.Next being nagative!!
+  
+  #### THEN
+  
+  ##TODO: Write another feature into the tc simulation data that has segments over 8hrs with an
+  ##      even minute value to be the only segment in the cluster. For testing missing both meals!!
+  
+  #### THEN
+  
+  ##TODO: Modify the meal compliant ranking system to rank non-compliant meals because otherwise
+  ##       the non-compliant meals will be filtered out. Compliant ranking should be based on
+  ##       meal.X.required AND THEN a second meal.X.ranking for use in the line identification.
+  
+  
+  
+  stop()
+  
+  
+  #sh<-
+  tc %>% 
+    ungroup() %>% 
+    group_by(Person.ID, Cluster.Start, Cluster.End) %>% 
+    mutate(Cluster.Overnight=sum(Cluster.Overnight),
+           False.Positive.Clock=sum(False.Positive.Clock)) %>% 
+    ungroup() %>% 
+    select(Person.ID, Weekday, Pairs.Per.Cluster, False.Positive.Clock, Cluster.Overnight,
+           Cluster.Start, Cluster.End, Cluster.Length) %>% 
+    glimpse()
+    
+      
+    
+  
+  
+  tc %>%
+    filter(Meal.1.Compliance.Ranking==1) %>% glimpse()
+    group_by(Person.ID, Cluster.Start) %>%
+    select(contains("Meal.1")) %>% 
+    glimpse()
+    
+    
+    
+    
+    
+    
+    
+    
 beep(2)
 stop()
 
