@@ -190,6 +190,23 @@ df<-df %>%
              Meal.Break.2.MINS=ceiling(Meal.Break.2.MINS) )
   
 
+# ** Forced Missed Meal ----------------------------------------------------------------------------
+
+table(df$Meal.Break.1.MINS, df$Instance.Length.1>8)
+
+df<-df %>%
+  mutate(Instance.Length.2=ifelse(Instance.Length.1>8, 0, Instance.Length.2),
+         Instance.Length.3=ifelse(Instance.Length.1>8, 0, Instance.Length.3),
+         Meal.Break.1.MINS=ifelse(Instance.Length.1>8, 0, Meal.Break.1.MINS),
+         Meal.Break.2.MINS=ifelse(Instance.Length.1>8, 0, Meal.Break.2.MINS),
+         Meal.Break.3.MINS=ifelse(Instance.Length.1>8, 0, Meal.Break.3.MINS),
+         )
+
+table(df$Meal.Break.1.MINS, df$Instance.Length.1>8)
+
+beep(2)
+stop()
+
 summary(df$Date.ORG)
 summary(df$Date) #Data spans from 2010-01-02 to 2020-03-01
 
