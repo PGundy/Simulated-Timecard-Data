@@ -150,9 +150,15 @@ df<-df %>%
                                   0),
          Instance.Length.3=(round(Instance.Length.3*60)/60),
          Instance.Length.3=ifelse(Instance.Length.3<0, (0/60), Instance.Length.3),
-         Instance.Length.3.MINS=as.integer(Instance.Length.3*60),
-        
-         Shift.Length.Total=(Instance.Length.1+Instance.Length.2+Instance.Length.3),
+         Instance.Length.3.MINS=as.integer(Instance.Length.3*60)) %>% 
+      ## Forced censoring for creating Missed Meals
+  mutate(Instance.Length.2=ifelse(Instance.Length.1>8, 0, Instance.Length.2),
+         Instance.Length.2.MINS=ifelse(Instance.Length.1>8, 0, Instance.Length.2.MINS),
+         Instance.Length.3=ifelse(Instance.Length.1>8, 0, Instance.Length.3),
+         Instance.Length.3.MINS=ifelse(Instance.Length.1>8, 0, Instance.Length.3.MINS),
+         ) %>% 
+      ## Shift Totals
+  mutate(Shift.Length.Total=(Instance.Length.1+Instance.Length.2+Instance.Length.3),
          Shift.Length.Total.MINS=(Instance.Length.1.MINS+Instance.Length.2.MINS+Instance.Length.3.MINS))
     
     
@@ -183,29 +189,15 @@ df<-df %>%
       mutate(Meal.Break.1.MINS=ifelse(Instance.Length.1==0 & Instance.Length.2==0,
                                  0,
                                  rnorm(n(), mean=31, sd=3)),
+             Meal.Break.1.MINS=ifelse(Instance.Length.1>8, 0, Meal.Break.1.MINS),
              Meal.Break.1.MINS=floor(Meal.Break.1.MINS),
+             
              Meal.Break.2.MINS=ifelse(Instance.Length.2==0 & Instance.Length.3==0,
                                  0,
                                  rnorm(n(), mean=29, sd=3)),
+             Meal.Break.2.MINS=ifelse(Instance.Length.1>8, 0, Meal.Break.2.MINS),
              Meal.Break.2.MINS=ceiling(Meal.Break.2.MINS) )
-  
 
-# ** Forced Missed Meal ----------------------------------------------------------------------------
-
-table(df$Meal.Break.1.MINS, df$Instance.Length.1>8)
-
-df<-df %>%
-  mutate(Instance.Length.2=ifelse(Instance.Length.1>8, 0, Instance.Length.2),
-         Instance.Length.3=ifelse(Instance.Length.1>8, 0, Instance.Length.3),
-         Meal.Break.1.MINS=ifelse(Instance.Length.1>8, 0, Meal.Break.1.MINS),
-         Meal.Break.2.MINS=ifelse(Instance.Length.1>8, 0, Meal.Break.2.MINS),
-         Meal.Break.3.MINS=ifelse(Instance.Length.1>8, 0, Meal.Break.3.MINS),
-         )
-
-table(df$Meal.Break.1.MINS, df$Instance.Length.1>8)
-
-beep(2)
-stop()
 
 summary(df$Date.ORG)
 summary(df$Date) #Data spans from 2010-01-02 to 2020-03-01
