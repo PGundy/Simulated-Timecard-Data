@@ -24,9 +24,9 @@ WD.Sim.Data<-file.path(WD, "Sim.Data")
 
 # Packages Enablement -----------------------------------------------------
 
-require("checkpoint")
-checkpoint("2019-12-07", project=WD, forceProject = TRUE)
-setSnapshot("2019-12-07")
+#require("checkpoint")
+#checkpoint("2019-12-07", project=WD, forceProject = TRUE)
+#setSnapshot("2019-12-07")
 
 pkgs<-rev(c("dplyr",        ## for data handling
             "stringr",      ## for strings
@@ -265,12 +265,7 @@ tc<-tc %>%
            ) %>% 
     ungroup() %>% 
     mutate(Shift.Overnight=ifelse(date(Shift.Start)!=date(Shift.End), T, F),
-           False.Positive.Clock=ifelse(Shift.Start==Shift.End & 
-                                         Gap.Last %in% False.Positive.Clock.VAR,
-                                       T, F))
-
-
-
+           False.Positive.Clock=ifelse(Gap.Next==0 | In.Actual.dt==Out.Actual.dt, T, F))
 
   
   
@@ -290,11 +285,15 @@ tc<-tc %>%
          
          Meal.1.LateShort.MINS=Meal.1.Late.MINS+Meal.1.Short.MINS,
          
+         Meal.1.Compliant=ifelse(Meal.1.Required==1, 0, NA),
          Meal.1.Compliant=ifelse(Meal.1.Required==1 &
                                    Next.Break.Length.MINS>=Meal.Break.Req.MINS &
                                    Meal.1.LateShort.MINS==0,
                                  1,
-                                 0),
+                                 Meal.1.Compliant),
+         Meal.1.Compliant=ifelse(is.na(Next.Break.Length.MINS), 0, Meal.1.Compliant),
+         Meal.1.Compliant=ifelse(False.Positive.Clock==TRUE, 0, Meal.1.Compliant),
+         
          
          Meal.1.Length=ifelse(Meal.1.Required==1, Next.Break.Length.MINS, NA),
           ## Note: Meal.1.Norm.Meal.Time expects M1 1/3 through a shift for natural fit
@@ -312,17 +311,20 @@ tc<-tc %>%
                                   0),
          Meal.2.LateShort.MINS=Meal.2.Late.MINS+Meal.2.Short.MINS,
          
+         Meal.2.Compliant=ifelse(Meal.2.Required==1, 0, NA),
          Meal.2.Compliant=ifelse(Meal.2.Required==1 & 
                                    Next.Break.Length.MINS>=Meal.Break.Req.MINS &
                                    Meal.2.LateShort.MINS==0,
                                  1,
-                                 0),
+                                 Meal.2.Compliant),
+         Meal.2.Compliant=ifelse(is.na(Next.Break.Length.MINS), 0, Meal.2.Compliant),
+         Meal.2.Compliant=ifelse(False.Positive.Clock==TRUE, 0, Meal.2.Compliant),
+         
          Meal.2.Length=ifelse(Meal.2.Required==1, Next.Break.Length.MINS, NA),
           ## Note: Meal.1.Norm.Meal.Time expects M2 1/3 through a shift for natural fit
          Meal.2.Norm.Meal.Time=ifelse(!is.na(Meal.2.Length),
                                       round(abs(Shift.Length*(2/3)-Shift.Accum), 3),
                                       NA) )
-  
   
 
 # Meal 1 Compliant ---------------------------------------------------------------------------------
@@ -330,7 +332,8 @@ tc<-tc %>%
 
   tc.M1<- tc %>% ## Below arranges tc by the shift and orders by M1 compliance & expected
     ungroup() %>% 
-    filter(Meal.1.Required==1) %>% 
+    ### TODO: CHANGE this to remove any is.na(Next.Break.Length.MINS), easier to remove false gaps this way & avoid assigning a ranking to an impossible gap in time
+    filter(Meal.1.Required==1 & !is.na(Next.Break.Length.MINS) & False.Positive.Clock==FALSE) %>% 
     arrange(Person.ID, Shift.Start, desc(Meal.1.Compliant), Meal.1.Norm.Meal.Time, In.Actual.dt) %>% 
     group_by(Person.ID, Shift.Start) %>% 
     mutate(Meal.1.Compliance.Ranking=ifelse(Meal.1.Compliant==1, row_number(), NA),
@@ -346,8 +349,9 @@ tc<-tc %>%
   
   tc.M2<- tc %>% 
     ungroup() %>% 
-    filter(Meal.2.Required==1) %>% 
-    filter(Meal.1.Compliance.Ranking!=1 | is.na(Meal.1.Compliance.Ranking)) %>% 
+    filter(Meal.2.Required==1 & !is.na(Next.Break.Length.MINS) & False.Positive.Clock==FALSE) %>% 
+    filter(Meal.1.Rankings!=1 | is.na(Meal.1.Rankings) ) %>% 
+    filter(!is.na(Next.Break.Length.MINS)) %>% 
     arrange(Person.ID, Shift.Start, desc(Meal.2.Compliant), Meal.2.Norm.Meal.Time, In.Actual.dt) %>% 
     group_by(Person.ID, Shift.Start) %>% 
     mutate(Meal.2.Compliance.Ranking=ifelse(Meal.2.Compliant==1, ## Can be NA for M1 compliant
@@ -402,7 +406,7 @@ tc<-tc %>% select(everything(), ##Needed in order to keep
              Person.ID, Date, 
              Shift.Start, Shift.End, Shift.Length, Pairs.Per.Shift) %>% 
     summarize(Shift.Overnight=sum(Shift.Overnight)>0,
-              False.Positive.Clock=sum(False.Positive.Clock),
+              False.Positive.Clock=sum(False.Positive.Clock)>0,
               
               ##Meal Requirements
               Meal.Required=(sum(Meal.1.Required, na.rm=TRUE)+sum(Meal.2.Required, na.rm=T))>0,
@@ -423,7 +427,7 @@ tc<-tc %>% select(everything(), ##Needed in order to keep
                 ungroup() %>% 
                 mutate(Meal.1.Pair=paste("b/w", Pair.Order, "&", Pair.Order+1, "of", Pairs.Per.Shift),
                        Meal.1.Break.Start=ifelseC(Meal.1.Rankings==1, Out.Actual.dt, NA),
-                       Meal.1.Break.End=ifelseC(Meal.1.Rankings==1, lead(In.Actual.dt), NA),) %>% 
+                       Meal.1.Break.End=ifelseC(Meal.1.Rankings==1, lead(In.Actual.dt), NA)) %>% 
                 filter(Meal.1.Rankings==1) %>% 
                 select(Person.ID, Shift.Start, contains("Meal.1"), 
                        -Meal.1.Length, Meal.1.Length, 
@@ -431,54 +435,158 @@ tc<-tc %>% select(everything(), ##Needed in order to keep
               ) %>% 
 # ** M1 Features ----
   mutate(Meal.1.Violation=ifelse(Meal.1.Compliant!=1 & Meal.1.Required==1, 1, 0),
+         Meal.1.Violation=ifelse(is.na(Meal.1.Compliant) & Meal.1.Required==1, 1, Meal.1.Violation),
          Meal.1.Violation=ifelse(Meal.1.Required==1, Meal.1.Violation, NA),
-         Meal.1.Violation.TYPE=ifelse(Meal.1.Violation==1 & Pairs.Per.Shift==1 & Meal.1.Required==1,
-                                      "Missed", 
-                                      "ERROR"),
          Meal.1.Violation.TYPE=ifelse(Meal.1.Violation==1 & Meal.1.LateShort.MINS>0,
                                       "Short & Late",
-                                      Meal.1.Violation.TYPE),
+                                      "ERROR"),
          Meal.1.Violation.TYPE=ifelse(Meal.1.Violation==1 & Meal.1.Short.MINS>0 & Meal.1.Late.MINS==0,
                                       "Short",
                                       Meal.1.Violation.TYPE),
          Meal.1.Violation.TYPE=ifelse(Meal.1.Violation==1 & Meal.1.Late.MINS>0 & Meal.1.Short.MINS==0,
                                       "Late",
                                       Meal.1.Violation.TYPE),
-         Meal.1.Violation.TYPE=ifelse(Meal.1.Compliant==1,
-                                      NA,
+         Meal.1.Violation.TYPE=ifelse(is.na(Meal.1.Rankings),
+                                      "Missed", 
                                       Meal.1.Violation.TYPE),
-         Meal.1.Violation.TYPE=ifelse(Meal.1.Required==1 &  
-                                        is.na(Meal.1.Length) &
-                                        (Pairs.Per.Shift-Shift.Overnight-False.Positive.Clock)==1,
-                                      "Missed",
+         Meal.1.Violation.TYPE=ifelse(Meal.1.Violation==0,
+                                       "Compliant",
                                       Meal.1.Violation.TYPE)
-         )
-# ** M1 Join ---------------------------------------------------
-#!#!   left_join(.,
-#!#!             tc %>% 
-#!#!               filter(Meal.2.Rankings==1) %>% 
-#!#!               select(Person.ID, Shift.Start, contains("Meal.2"), 
-#!#!                      -Meal.2.Compliant, Meal.2.Compliant)
-#!#!   ) %>% 
-#!#! ## ** M2 Features ----
-#!#!   mutate(Meal.2.Violation=ifelse(Meal.2.Compliant!=1 & Meal.2.Required==1, 1, 0)) %>% 
-#    left_join(.,
-#              tc %>% 
-#                filter(Meal.2.Rankings==1) %>%  
-#                select(Person.ID, Shift.Start, contains("Meal.2"))
-#              ) %>% 
+         ) %>% 
+    ##Imputing some data on the missed meals
+    mutate(Meal.1.Late.MINS=ifelse(Meal.1.Violation.TYPE=="Missed", 0, Meal.1.Late.MINS),
+           Meal.1.Short.MINS=ifelse(Meal.1.Violation.TYPE=="Missed", 0, Meal.1.Short.MINS),
+           Meal.1.LateShort.MINS=ifelse(Meal.1.Violation.TYPE=="Missed", 0, Meal.1.LateShort.MINS)
+           ) %>% 
+    
+# ** M2 Join ---------------------------------------------------
+   left_join(.,
+             tc %>% 
+               ungroup() %>% 
+               mutate(Meal.2.Pair=paste("b/w", Pair.Order, "&", Pair.Order+1, "of", Pairs.Per.Shift),
+                      Meal.2.Break.Start=ifelseC(Meal.2.Rankings==1, Out.Actual.dt, NA),
+                      Meal.2.Break.End=ifelseC(Meal.2.Rankings==1, lead(In.Actual.dt), NA) ) %>% 
+               filter(Meal.2.Rankings==1) %>% 
+               select(Person.ID, Shift.Start, contains("Meal.2"), 
+                      -Meal.2.Length, Meal.2.Length, 
+                      -Meal.2.Compliant, Meal.2.Compliant) ) %>% 
+ ## ** M2 Features ----
+   mutate(Meal.2.Violation=ifelse(Meal.2.Compliant!=1 & Meal.2.Required==1, 1, 0),
+          Meal.2.Violation=ifelse(is.na(Meal.2.Compliant) & Meal.2.Required==1, 1, Meal.2.Violation),
+          Meal.2.Violation=ifelse(Meal.2.Required==1, Meal.2.Violation, NA),
+          Meal.2.Violation.TYPE=ifelse(Meal.2.Violation==1 & Meal.2.LateShort.MINS>0,
+                                       "Short & Late",
+                                       "ERROR"),
+          Meal.2.Violation.TYPE=ifelse(Meal.2.Violation==1 & Meal.2.Short.MINS>0 & Meal.2.Late.MINS==0,
+                                       "Short",
+                                       Meal.2.Violation.TYPE),
+          Meal.2.Violation.TYPE=ifelse(Meal.2.Violation==1 & Meal.2.Late.MINS>0 & Meal.2.Short.MINS==0,
+                                       "Late",
+                                       Meal.2.Violation.TYPE),
+          Meal.2.Violation.TYPE=ifelse(is.na(Meal.2.Rankings),
+                                       "Missed", 
+                                       Meal.2.Violation.TYPE),
+          Meal.2.Violation.TYPE=ifelse(Meal.2.Violation==0,
+                                       "Compliant",
+                                       Meal.2.Violation.TYPE) ) %>% 
+    ##Imputing some data on the missed meals
+    mutate(Meal.2.Late.MINS=ifelse(Meal.2.Violation.TYPE=="Missed", 0, Meal.2.Late.MINS),
+           Meal.2.Short.MINS=ifelse(Meal.2.Violation.TYPE=="Missed", 0, Meal.2.Short.MINS),
+           Meal.2.LateShort.MINS=ifelse(Meal.2.Violation.TYPE=="Missed", 0, Meal.2.LateShort.MINS)) %>% 
+    
+# *** Joint Features -------------------------------------------------------------------------------
+    mutate(Shift.Compliant=ifelse( (Meal.1.Violation.TYPE=="Compliant" &
+                                      Meal.2.Violation.TYPE=="Compliant") |
+                                    (Meal.1.Violation.TYPE=="Compliant" & 
+                                       is.na(Meal.2.Violation.TYPE)),
+                                  1,
+                                  0),
+           Shift.Violation=ifelse(Shift.Compliant==0, 1, 0) )%>%
+    mutate(Shift.Violation.Type="ERROR",
+           ##No Meal Required
+           Shift.Violation.Type=ifelse(is.na(Meal.1.Violation),
+                                       "No Meal Required",
+                                       Shift.Violation.Type),
+           
+           ##Both Meals Compliant
+           Shift.Violation.Type=ifelse(Meal.1.Violation==0 & Meal.2.Violation==0,
+                                       NA,
+                                       Shift.Violation.Type),
+           
+           #Both Meals Violated
+           Shift.Violation.Type=ifelse(Meal.1.Violation==1 & Meal.2.Violation==1,
+                                       paste("Both - Meal 1:", Meal.1.Violation.TYPE,
+                                             " & Meal 2:", Meal.2.Violation.TYPE),
+                                       Shift.Violation.Type),
+           #2nd Meal Violation
+           Shift.Violation.Type=ifelse(Meal.1.Violation==0 & Meal.2.Violation==1,
+                                        paste("Meal 2:", Meal.2.Violation.TYPE),
+                                        Shift.Violation.Type),
+           
+           #1st Meal Violation
+           Shift.Violation.Type=ifelse(Meal.1.Violation==1 & 
+                                         (is.na(Meal.2.Violation) | Meal.2.Violation==0),
+                                       paste("Meal 1:", Meal.1.Violation.TYPE),
+                                       Shift.Violation.Type)
+           )
+  
+  
+  glimpse(sh2)
+
+  #tableRAW(sh2$Meal.1.Violation)
+  #tableRAW(sh2$Meal.2.Violation)
+  table(paste(sh2$Meal.1.Violation), paste(sh2$Meal.2.Violation==1))
+  table(paste(sh2$Shift.Violation.Type), paste(sh2$Shift.Compliant))
+  
+#  tableRAW(sort(sh2$Shift.Violation.Type2))
+  beepr::beep(2)
+  stop()
   
   
   
-  dim(sh2)
-  tableRAW(sh2$Meal.1.Violation.TYPE)
-  table(sh$Meal.1.Required, sh2$Meal.1.Violation.TYPE)
   
+  
+
+# * ------------------------------------------------------------------------------------------------
+# Quick QC -----------------------------------------------------------------------------------------
+  
+  print(" --------------- Meal 1 Tables --------------- ")
+  table(paste(sh2$Meal.1.Compliant), paste(sh2$Meal.1.Required))
+  table(paste(sh2$Meal.1.Violation.TYPE), paste(sh2$Meal.1.Required))
+  table(paste(sh2$Meal.1.Violation.TYPE), paste(sh2$Meal.1.Rankings))
+  table(paste(sh2$Meal.1.Violation.TYPE), paste(sh2$Meal.1.Compliance.Ranking))
+  
+  print(" --------------- Meal 2 Tables --------------- ")
+  table(paste(sh2$Meal.2.Compliant), paste(sh2$Meal.2.Required))
+  table(paste(sh2$Meal.2.Violation.TYPE), paste(sh2$Meal.2.Required))
+  table(paste(sh2$Meal.2.Violation.TYPE), paste(sh2$Meal.2.Rankings))
+  table(paste(sh2$Meal.2.Violation.TYPE), paste(sh2$Meal.2.Compliance.Ranking))
+  
+  print("Shift Overall")
+  table(paste(sh2$Shift.Violation.Type), paste(sh2$Meal.1.Required))
+  table(paste(sh2$Shift.Violation.Type), paste(sh2$Meal.2.Required))
+  table(paste(sh2$Shift.Violation.Type), paste(sh2$Meal.1.Violation))
+  table(paste(sh2$Shift.Violation.Type), paste(sh2$Meal.2.Violation))
+  table(paste(sh2$Shift.Violation.Type), paste(sh2$Shift.Violation))
+  table(paste(sh2$Shift.Violation.Type), paste(sh2$Shift.Compliant))
+  
+  
+  table(paste(sh2$Meal.1.Violation.TYPE), paste(sh2$Meal.2.Violation.TYPE))
+  
+  
+  
+
+  #tc %>% filter(str_detect(Shift.Start, "2014-08-30 09:53:00")) %>% View(., "tc: 2014-08-30 09:53:00")
+  #sh2 %>% filter(str_detect(Shift.Start, "2014-08-30 09:53:00")) %>% View(., "sh2: 2014-08-30 09:53:00")
+  
+  ##TODO need to address missing meal 1s due to it causing an issue with the summary stats...
+  ##
+  ## EXAMPLE: 2010-09-10 08:29:00
+  ##
   
   
 beep(2)
 stop()
-
 
 
 
