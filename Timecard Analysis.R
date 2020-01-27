@@ -420,7 +420,7 @@ tc<-tc %>% select(everything(), ##Needed in order to keep
 
 # * Joining M1 & M2 ------------------------------------------------------------------------------------
 
-  sh2<-sh %>% 
+  sh<-sh %>% 
 # ** M1 Join ---------------------------------------------------
     left_join(.,
               tc %>% 
@@ -531,14 +531,14 @@ tc<-tc %>% select(everything(), ##Needed in order to keep
            )
   
   
-  glimpse(sh2)
+  glimpse(sh)
 
-  #tableRAW(sh2$Meal.1.Violation)
-  #tableRAW(sh2$Meal.2.Violation)
-  table(paste(sh2$Meal.1.Violation), paste(sh2$Meal.2.Violation==1))
-  table(paste(sh2$Shift.Violation.Type), paste(sh2$Shift.Compliant))
+  #tableRAW(sh$Meal.1.Violation)
+  #tableRAW(sh$Meal.2.Violation)
+  table(paste(sh$Meal.1.Violation), paste(sh$Meal.2.Violation==1))
+  table(paste(sh$Shift.Violation.Type), paste(sh$Shift.Compliant))
   
-#  tableRAW(sort(sh2$Shift.Violation.Type2))
+#  tableRAW(sort(sh$Shift.Violation.Type2))
   beepr::beep(2)
   stop()
   
@@ -551,39 +551,41 @@ tc<-tc %>% select(everything(), ##Needed in order to keep
 # Quick QC -----------------------------------------------------------------------------------------
   
   print(" --------------- Meal 1 Tables --------------- ")
-  table(paste(sh2$Meal.1.Compliant), paste(sh2$Meal.1.Required))
-  table(paste(sh2$Meal.1.Violation.TYPE), paste(sh2$Meal.1.Required))
-  table(paste(sh2$Meal.1.Violation.TYPE), paste(sh2$Meal.1.Rankings))
-  table(paste(sh2$Meal.1.Violation.TYPE), paste(sh2$Meal.1.Compliance.Ranking))
+  table(paste(sh$Meal.1.Compliant), paste(sh$Meal.1.Required))
+  table(paste(sh$Meal.1.Violation.TYPE), paste(sh$Meal.1.Required))
+  table(paste(sh$Meal.1.Violation.TYPE), paste(sh$Meal.1.Rankings))
+  table(paste(sh$Meal.1.Violation.TYPE), paste(sh$Meal.1.Compliance.Ranking))
   
   print(" --------------- Meal 2 Tables --------------- ")
-  table(paste(sh2$Meal.2.Compliant), paste(sh2$Meal.2.Required))
-  table(paste(sh2$Meal.2.Violation.TYPE), paste(sh2$Meal.2.Required))
-  table(paste(sh2$Meal.2.Violation.TYPE), paste(sh2$Meal.2.Rankings))
-  table(paste(sh2$Meal.2.Violation.TYPE), paste(sh2$Meal.2.Compliance.Ranking))
+  table(paste(sh$Meal.2.Compliant), paste(sh$Meal.2.Required))
+  table(paste(sh$Meal.2.Violation.TYPE), paste(sh$Meal.2.Required))
+  table(paste(sh$Meal.2.Violation.TYPE), paste(sh$Meal.2.Rankings))
+  table(paste(sh$Meal.2.Violation.TYPE), paste(sh$Meal.2.Compliance.Ranking))
   
   print("Shift Overall")
-  table(paste(sh2$Shift.Violation.Type), paste(sh2$Meal.1.Required))
-  table(paste(sh2$Shift.Violation.Type), paste(sh2$Meal.2.Required))
-  table(paste(sh2$Shift.Violation.Type), paste(sh2$Meal.1.Violation))
-  table(paste(sh2$Shift.Violation.Type), paste(sh2$Meal.2.Violation))
-  table(paste(sh2$Shift.Violation.Type), paste(sh2$Shift.Violation))
-  table(paste(sh2$Shift.Violation.Type), paste(sh2$Shift.Compliant))
+  table(paste(sh$Shift.Violation.Type), paste(sh$Meal.1.Required))
+  table(paste(sh$Shift.Violation.Type), paste(sh$Meal.2.Required))
+  table(paste(sh$Shift.Violation.Type), paste(sh$Meal.1.Violation))
+  table(paste(sh$Shift.Violation.Type), paste(sh$Meal.2.Violation))
+  table(paste(sh$Shift.Violation.Type), paste(sh$Shift.Violation))
+  table(paste(sh$Shift.Violation.Type), paste(sh$Shift.Compliant))
   
   
-  table(paste(sh2$Meal.1.Violation.TYPE), paste(sh2$Meal.2.Violation.TYPE))
+  table(paste(sh$Meal.1.Violation.TYPE), paste(sh$Meal.2.Violation.TYPE))
   
   
   
 
   #tc %>% filter(str_detect(Shift.Start, "2014-08-30 09:53:00")) %>% View(., "tc: 2014-08-30 09:53:00")
-  #sh2 %>% filter(str_detect(Shift.Start, "2014-08-30 09:53:00")) %>% View(., "sh2: 2014-08-30 09:53:00")
+  #sh %>% filter(str_detect(Shift.Start, "2014-08-30 09:53:00")) %>% View(., "sh: 2014-08-30 09:53:00")
   
   ##TODO need to address missing meal 1s due to it causing an issue with the summary stats...
   ##
   ## EXAMPLE: 2010-09-10 08:29:00
   ##
   
+  
+  glimpse(sh)
   
 beep(2)
 stop()
@@ -594,6 +596,9 @@ stop()
 
 
 
+
+
+# *** ----------------------------------------------------------------------------------------------
 
 
 
@@ -634,6 +639,8 @@ table(tc$Person.ID, !is.na(tc$WW.4yr.SOL))
 table(tc$Person.ID, !is.na(tc$PP.4yr.SOL))
 
 
+
+glimpse(sh)
 ## tc %>%
 ##   group_by(Person.ID) %>% 
 ##   summarize(WW.4yr.SOL=uniqueN(WW.4yr.SOL, na.rm=TRUE),
