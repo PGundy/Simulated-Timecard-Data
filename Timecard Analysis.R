@@ -19,6 +19,12 @@ WD<-file.path("Projects", "Simulated Data", "Simulated-Timecard-Data")
 dir.create(file.path(WD, "Sim.Data"), showWarnings = F)
 WD.Sim.Data<-file.path(WD, "Sim.Data")
 
+#Viz Exports - Folder Generation
+dir.create(file.path(WD, "Viz Exports"), showWarnings = F)
+WD.Viz.Exports<-file.path(WD, "Viz Exports")
+
+
+
 ####
 ####
 
@@ -393,8 +399,10 @@ tc<-tc %>% select(everything(), ##Needed in order to keep
     glimpse()
     #View(., "tc QC: 2010-03-08 15:54:00")
   
-  
-# *** ----------------------------------------------------------------------------------------------
+
+
+# ***** --------------------------------------------------------------------------------------------
+
 # sh Analysis --------------------------------------------------------------------------------------
 
   sh<-tc %>% 
@@ -675,5 +683,152 @@ glimpse(sh)
 ##TODO: all violations and compliance w/ waivers
 ##TODO: 
 
+# *** ----------------------------------------------------------------------------------------------
+
+# Visualizations -----------------------------------------------------------------------------------
+
+# * Viz Variables ----------------------------------------------------------------------------------
+tc<-tc %>% 
+  ungroup() %>% 
+  mutate(Viz.Date=date(In.Actual.dt),
+         time.d=(hour(In.Actual.dt)+minute(In.Actual.dt)/60 ),
+         time.d.start=time.d,
+         time.d.start.hm=str_extract(In.Actual.dt, "\\d\\d\\:\\d\\d"),
+         time.d.end=time.d+Pair.Length,
+         time.d.end.hm=str_extract(Out.Actual.dt, "\\d\\d\\:\\d\\d"),
+         width=0.75,
+         time.d.mid=(time.d.start+time.d.end)/2,
+         Shift.Meal.Factor=ifelse(Shift.Length<5, "No Meal Req", "OTHER"),
+         Shift.Meal.Factor=ifelse(Shift.Length>=5 & Shift.Length<10, "1 Meal Req", Shift.Meal.Factor),
+         Shift.Meal.Factor=ifelse(Shift.Length>=10, "2 Meal Req", Shift.Meal.Factor)
+  )
+
+glimpse(tc)
+
+
+# * Day Overview -----------------------------------------------------------------------------------
+
+data.ggplot.test<-tc %>%
+  filter(str_detect(Person.ID, "0001")) %>% 
+  filter(Viz.Date>ymd("2019-12-31") & Viz.Date<ymd("2020-04-01"))
+
+glimpse(data.ggplot.test)
+
+ggplot.test<-ggplot(data=data.ggplot.test, 
+                    aes(ymin=time.d.start, 
+                        ymax=time.d.end, 
+                        xmin=(Viz.Date-width/2), 
+                        xmax=(Viz.Date+width/2),
+                        fill=Shift.Meal.Factor )) +
+  geom_rect()+
+  geom_text(data=data.ggplot.test,
+            aes(x=Viz.Date, y=time.d.mid, size=Pair.Length,
+                label=paste(time.d.end.hm, time.d.start.hm, sep="\n")
+            )
+            #label=pm_name, #all names of separate variables
+            #text=paste(time.d.start, time.d.end, sep=" to ")) 
+            #text=paste(party_name_english, " (",country_name,")", sep="")) 
+  )+ 
+  scale_size(range = c(2.5,3.5), guide = F)+
+  scale_y_continuous(name="Time of Day", breaks=seq(0, 24, 1), limits=c(-1, 25), expand=c(0,0))+
+  scale_x_date(name="Date", breaks = "1 day")+
+  #coord_flip()+
+  theme_bw()
+
+ggplot.test
+
+
+# ** Plotly Basic ----------------------------------------------------------------------------------
+
+plotly.test<-ggplot.test %>% ggplotly()
+plotly.test
+htmlwidgets::saveWidget(plotly.test,
+                        selfcontained = TRUE,
+                        file.path(normalizePath(WD.Viz.Exports), "Day Overview - Basic Plotly.HTML"))
+
+
+
+# ** Plotly Slider ---------------------------------------------------------------------------------
+
+plotly.test2<-plotly.test %>% layout( xaxis = list( rangeslider = list(type = "Viz.Date")) )
+plotly.test2
+htmlwidgets::saveWidget(plotly.test2,
+                        selfcontained = TRUE,
+                        file.path(normalizePath(WD.Viz.Exports), "Day Overview - Slider Plotly.HTML"))
+
+
+
+
+
+# *** ----------------------------------------------------------------------------------------------
+
+
+# * Meal 1 Lateness --------------------------------------------------------------------------------
+
+tc %>% 
+  ggplot(data=., aes(x=Shift.Length, fill=Shift.Meal.Factor))+
+  geom_histogram(binwidth = 0.1, alpha=0.5#, position="identity"
+  )
+
+tc %>% 
+  filter(Meal.1.Late.MINS>0) %>% 
+  filter(Meal.1.Rankings==1) %>% 
+  ggplot(data=., aes(x=Meal.1.Late.MINS, fill=Person.ID))+
+  geom_histogram(binwidth = 1, alpha=0.5#, position="identity"
+  )
+
+tc %>% 
+  filter(Meal.1.Short.MINS>0) %>% 
+  filter(Meal.1.Rankings==1) %>% 
+  ggplot(data=., aes(x=Meal.1.Short.MINS, fill=Person.ID))+
+  geom_histogram(binwidth = 1, alpha=0.5#, position="identity"
+  )
+
+tc %>% 
+  filter(Meal.1.LateShort.MINS>0) %>% 
+  filter(Meal.1.Rankings==2) %>% 
+  ggplot(data=., aes(x=Meal.1.LateShort.MINS, fill=Person.ID))+
+  geom_histogram(binwidth = 1, alpha=0.5#, position="identity"
+  )
+
+tc %>% 
+  filter(Meal.2.Short.MINS>0) %>% 
+  filter(Meal.1.Rankings==2) %>% 
+  ggplot(data=., aes(x=Meal.2.Short.MINS, fill=Person.ID))+
+  geom_histogram(binwidth = 1, alpha=0.5#, position="identity"
+  )
+
+
+
+
+##TODO: Make Day Overview chart using the below code
+
+##!# df <- data.frame(
+##!#   x = c("a", "b", "c"),
+##!#   y = c(1, 4, 2),
+##!#   w = c(0.5, 1.2, 0.1) )
+##!# 
+##!# df$xn <- as.numeric(df$x)
+##!# 
+##!# ggplot(df, aes(xmin = xn - w / 2,
+##!#                xmax = xn + w / 2,
+##!#                ymin = y,
+##!#                ymax = y + 1,
+##!#                fill = x)) +
+##!#   geom_rect() + 
+##!#   scale_fill_discrete(guide = FALSE) +
+##!#   scale_x_continuous(expand = c(0, 0.5),
+##!#                      labels = levels(df$x),
+##!#                      breaks = 1:length(levels(df$x))) +
+##!#   coord_cartesian(xlim = c(1, length(levels(df$x))))
+
+
+
+
+beep(5)
+
+
+
+# *** ----------------------------------------------------------------------------------------------
 
 
