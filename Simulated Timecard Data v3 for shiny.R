@@ -97,8 +97,6 @@ df<-df %>%
          Shift.Length.Total.MINS=(Instance.Length.1.MINS+Instance.Length.2.MINS+Instance.Length.3.MINS))
     
     
-    summary(df$Date)
-    stop()
     
     
     qplot(df$Instance.Length.1)
