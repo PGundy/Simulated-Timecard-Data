@@ -2,7 +2,7 @@
 # **************** --------------------------------------------------------------------------
 # Start Time ---------------------------------------------------------------------------------------
 
-Number.of.Days<-3650+60 ## (3650 days of days represents 10yrs of data PLUS 60 days extra)
+Number.of.Days<-365*10.7 ## 11.7 years of data
 
 Start.Hours.1<-rnorm(Number.of.Days, mean=10, sd=1)
   summary(Start.Hours.1)
@@ -97,6 +97,10 @@ df<-df %>%
          Shift.Length.Total.MINS=(Instance.Length.1.MINS+Instance.Length.2.MINS+Instance.Length.3.MINS))
     
     
+    summary(df$Date)
+    stop()
+    
+    
     qplot(df$Instance.Length.1)
     summary(df$Instance.Length.1)
     qplot(df$Instance.Length.2)
@@ -110,7 +114,7 @@ df<-df %>%
     qplot(df$Shift.Length.Total)
     summary(df$Shift.Length.Total)
     
-    qplot(df$Shift.Length.Total) %>% plotly::ggplotly()
+    qplot(df$Shift.Length.Total, binwidth=0.25) %>% plotly::ggplotly()
     
     
 
