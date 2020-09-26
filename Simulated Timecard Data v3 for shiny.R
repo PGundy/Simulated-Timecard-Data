@@ -206,6 +206,9 @@ tc.TEMP<-full_join(tc.TEMP, tc.TEMP3)
 
 tc<-tc.TEMP
 
+
+ls() %>% str_subset(., ".TEMP|^df$") %>% rm()
+
 #fwrite.DF.to.csv.as.char(tc,
 #                         file.path(WD.Sim.Data,
 #                                "Simulated Timecards for 2 Employees across 2010-01 to 2020-03.csv"))
