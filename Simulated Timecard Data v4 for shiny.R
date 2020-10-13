@@ -253,9 +253,6 @@ tc.TEMP<-full_join(tc.TEMP, tc.TEMP3)
 
 
 tc<-tc.TEMP
-
-stop()
-
 rm(list=str_subset(ls(), "^tc.TEMP|^DF.tc$|__$") )
 
 
