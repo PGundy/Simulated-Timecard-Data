@@ -164,10 +164,10 @@ df<-df %>%
   mutate(In.Actual.dt1=Start.Time.dt,
          Out.Actual.dt1=In.Actual.dt1+ minutes(as.integer(Instance.Length.1.MINS)),
          
-         In.Actual.dt2=Out.Actual.dt1+minutes(as.integer(df$Meal.Break.1.MINS)),
+         In.Actual.dt2=Out.Actual.dt1+minutes(as.integer(Meal.Break.1.MINS)),
          Out.Actual.dt2=In.Actual.dt2+ minutes(as.integer(Instance.Length.2.MINS)),
          
-         In.Actual.dt3=Out.Actual.dt2+minutes(as.integer(df$Meal.Break.2.MINS)),
+         In.Actual.dt3=Out.Actual.dt2+minutes(as.integer(Meal.Break.2.MINS)),
          Out.Actual.dt3=In.Actual.dt3+ minutes(as.integer(Instance.Length.3.MINS)) ) %>%
   select(Person.ID, 
          contains("dt1"), Instance.Length.1.MINS, Meal.Break.1.MINS,
@@ -207,12 +207,11 @@ tc.TEMP<-full_join(tc.TEMP, tc.TEMP3)
 
 
 tc<-tc.TEMP
+rm(list=str_subset(ls(), "^tc$", negate=TRUE) )
 
 
-ls() %>% str_subset(., ".TEMP|^df$") %>% rm()
 
-#fwrite.DF.to.csv.as.char(tc,
-#                         file.path(WD.Sim.Data,
-#                                "Simulated Timecards for 2 Employees across 2010-01 to 2020-03.csv"))
+
+
 
 
