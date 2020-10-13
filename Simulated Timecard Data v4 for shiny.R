@@ -1,30 +1,27 @@
 
 
 # Inputs & Parameters ------------------------------------------------------------------------------
-Number.Of.Emps<-400
+Number.Of.Emps__<-400
 Filing.Date<-ymd("2019-12-06") ## Implying SOL 4yr is 2015-12-06
-Date.Sim.Start<-(Filing.Date-years(4)-days(30*8))
-Plot.Status.TRUE_FALSE<-TRUE
+Date.Sim.Start__<-(Filing.Date-years(4)-days(30*8))
+Plot.Status.TRUE_FALSE__<-TRUE
 
 
 
-Employee.ID.Vector<-paste0("_", str_pad( seq(1, Number.Of.Emps, 1), width=9, side="left", pad="0" ))
-Employee.ID.Vector %>% head()
+Person.ID.Vector__<-paste0("_", str_pad( seq(1, Number.Of.Emps__, 1), width=9, side="left", pad="0" ))
+Person.ID.Vector__ %>% head()
 
-### Hire.Date.Jump.Start<-ceiling( runif(Number.Of.Emps, min = 0, max = (365*3.5)) )
-Hire.Date.Jump.Start<-ceiling( 90 + 
-                                 ceiling( runif(Number.Of.Emps, min = 0, max = (365*4)) ) )
+Hire.Date.Jump.Start__<-ceiling( 90 + ceiling( runif(Number.Of.Emps__, min = 0, max = (365*4)) ) )
+summary(Hire.Date.Jump.Start__)
+qplot(Hire.Date.Jump.Start__, binwidth=30)
 
-summary(Hire.Date.Jump.Start)
-qplot(Hire.Date.Jump.Start, binwidth=30)
 
-### Days.Employed<-ceiling( runif(Number.Of.Emps, min = 14, max = (365*5)) ) ## Worse than the below
-Days.Employed<-ceiling( runif(Number.Of.Emps, min = 14, max = (365*2.0)) + 
-                          ceiling( rnorm(Number.Of.Emps, mean=(365), sd=180) ) )
-Days.Employed<-ifelse(Days.Employed<0, 18, Days.Employed)
-##Days.Employed<-ceiling( rnorm(Number.Of.Emps, mean=(365*2), sd=120) )
-summary(Days.Employed)
-qplot(Days.Employed, binwidth=30)
+Days.Employed__<-ceiling( runif(Number.Of.Emps__, min = 14, max = (365*2.0)) + 
+                          ceiling( rnorm(Number.Of.Emps__, mean=(365), sd=180) ) )
+Days.Employed__<-ifelse(Days.Employed__<0, 18, Days.Employed__)
+##Days.Employed__<-ceiling( rnorm(Number.Of.Emps__, mean=(365*2), sd=120) )
+summary(Days.Employed__)
+qplot(Days.Employed__, binwidth=30)
 
 
 
@@ -33,10 +30,10 @@ qplot(Days.Employed, binwidth=30)
 
 Employee.Census<-data.frame(
   stringsAsFactors = FALSE,
-  Person.ID = Employee.ID.Vector,
-  Date.Sim.Start=Date.Sim.Start,
-  Hire.Date.Jump.Start=Hire.Date.Jump.Start,
-  Days.Employed=Days.Employed )
+  Person.ID = Person.ID.Vector__,
+  Date.Sim.Start=Date.Sim.Start__,
+  Hire.Date.Jump.Start=Hire.Date.Jump.Start__,
+  Days.Employed=Days.Employed__ )
 
 Employee.Census %>% glimpse()
 
@@ -79,7 +76,7 @@ table(Employee.Census$Term.Date>ymd("2020-09-01"))
 
 # * Census Plots -----------------------------------------------------------------------------------
 
-if (Plot.Status.TRUE_FALSE){
+if (Plot.Status.TRUE_FALSE__){
   
   qplot(data=Employee.Census, x = Hire.Date, binwidth=14, fill = Interval_6Months)
   qplot(data=Employee.Census, x = Term.Date, binwidth=14, fill = Interval_6Months)
@@ -106,7 +103,7 @@ if (Plot.Status.TRUE_FALSE){
 # Date Expansion -----------------------------------------------------------------------------------
 DF.tc<-setDT(Employee.Census)[, .(Date = seq(Hire.Date, Term.Date, by = '1 day')), by = Person.ID]
 
-if (Plot.Status.TRUE_FALSE){
+if (Plot.Status.TRUE_FALSE__){
   
   DF.tc %>% 
     filter(Date<ymd("2020-09-01")) %>% 
@@ -257,6 +254,8 @@ tc.TEMP<-full_join(tc.TEMP, tc.TEMP3)
 
 tc<-tc.TEMP
 
-rm(list=str_subset(ls(), "^tc$", negate=TRUE) )
+stop()
+
+rm(list=str_subset(ls(), "^tc.TEMP|^DF.tc$|__$") )
 
 
