@@ -4,7 +4,7 @@
 Number.Of.Emps__<-400
 Filing.Date<-ymd("2019-12-06") ## Implying SOL 4yr is 2015-12-06
 Date.Sim.Start__<-(Filing.Date-years(4)-days(30*8))
-Plot.Status.TRUE_FALSE__<-TRUE
+Plot.Status.TRUE_FALSE__<-FALSE
 
 
 
@@ -13,7 +13,7 @@ Person.ID.Vector__ %>% head()
 
 Hire.Date.Jump.Start__<-ceiling( 90 + ceiling( runif(Number.Of.Emps__, min = 0, max = (365*4)) ) )
 summary(Hire.Date.Jump.Start__)
-qplot(Hire.Date.Jump.Start__, binwidth=30)
+##qplot(Hire.Date.Jump.Start__, binwidth=30)
 
 
 Days.Employed__<-ceiling( runif(Number.Of.Emps__, min = 14, max = (365*2.0)) + 
@@ -21,7 +21,7 @@ Days.Employed__<-ceiling( runif(Number.Of.Emps__, min = 14, max = (365*2.0)) +
 Days.Employed__<-ifelse(Days.Employed__<0, 18, Days.Employed__)
 ##Days.Employed__<-ceiling( rnorm(Number.Of.Emps__, mean=(365*2), sd=120) )
 summary(Days.Employed__)
-qplot(Days.Employed__, binwidth=30)
+##qplot(Days.Employed__, binwidth=30)
 
 
 
@@ -76,7 +76,7 @@ table(Employee.Census$Term.Date>ymd("2020-09-01"))
 
 # * Census Plots -----------------------------------------------------------------------------------
 
-if (Plot.Status.TRUE_FALSE__){
+if (Plot.Status.TRUE_FALSE__==TRUE){
   
   qplot(data=Employee.Census, x = Hire.Date, binwidth=14, fill = Interval_6Months)
   qplot(data=Employee.Census, x = Term.Date, binwidth=14, fill = Interval_6Months)
@@ -99,11 +99,10 @@ if (Plot.Status.TRUE_FALSE__){
 }
 
 
-
 # Date Expansion -----------------------------------------------------------------------------------
 DF.tc<-setDT(Employee.Census)[, .(Date = seq(Hire.Date, Term.Date, by = '1 day')), by = Person.ID]
 
-if (Plot.Status.TRUE_FALSE__){
+if (Plot.Status.TRUE_FALSE__==TRUE){
   
   DF.tc %>% 
     filter(Date<ymd("2020-09-01")) %>% 
@@ -126,21 +125,24 @@ DF.tc %>% dim()
 
 DF.tc<-DF.tc %>% mutate(Day.Off=(runif(n(), min=0, max=7)>=5) )  ## (7-X) days off per week -- 
 
-
+suppressWarnings(
 DF.tc %>% 
   group_by(Person.ID) %>% 
-  summarize(Days=n(),
+  summarize(.groups="drop_last",
+            Days=n(),
             Days.Off=sum(Day.Off),
             Perc.Days.Off=Days.Off/Days) %>% 
   ungroup() %>% 
-  mutate(AVG_Perc.Days.Off=mean(Perc.Days.Off),
+  summarize(AVG_Perc.Days.Off=mean(Perc.Days.Off),
          MED_Perc.Days.Off=median(Perc.Days.Off),
          TOT_Perc.Days.Off=(sum(Days.Off)/sum(Days))) %>% 
-  qplot(data=.,
-        x = Perc.Days.Off,
-        xlim = c(0, 1),
-        binwidth = 0.025)
-
+  glimpse()
+  #qplot(data=.,
+  #      geom = "histogram",
+  #      x = Perc.Days.Off,
+  #      xlim = c(-0.05, 1.05),
+  #      binwidth = 0.025)
+)
 
 
 DF.tc<-DF.tc %>% 
@@ -254,5 +256,6 @@ tc.TEMP<-full_join(tc.TEMP, tc.TEMP3)
 
 tc<-tc.TEMP
 rm(list=str_subset(ls(), "^tc.TEMP|^DF.tc$|__$") )
+
 
 
