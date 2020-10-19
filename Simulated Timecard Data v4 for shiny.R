@@ -35,7 +35,7 @@ Employee.Census<-data.frame(
   Hire.Date.Jump.Start=Hire.Date.Jump.Start__,
   Days.Employed=Days.Employed__ )
 
-Employee.Census %>% glimpse()
+#!@!# Employee.Census %>% glimpse()
 
 Employee.Census<-Employee.Census %>% 
   mutate(Hire.Date=(Date.Sim.Start+days(Hire.Date.Jump.Start)),
@@ -68,7 +68,6 @@ Employee.Census<-Employee.Census %>%
 summary(Employee.Census$Actual.Days.Employed)
 
 
-Employee.Census %>% glimpse()
 table(Employee.Census$Term.Date>ymd("2020-09-01"))
 
 
@@ -125,24 +124,23 @@ DF.tc %>% dim()
 
 DF.tc<-DF.tc %>% mutate(Day.Off=(runif(n(), min=0, max=7)>=5) )  ## (7-X) days off per week -- 
 
-suppressWarnings(
-DF.tc %>% 
-  group_by(Person.ID) %>% 
-  summarize(.groups="drop_last",
-            Days=n(),
-            Days.Off=sum(Day.Off),
-            Perc.Days.Off=Days.Off/Days) %>% 
-  ungroup() %>% 
-  summarize(AVG_Perc.Days.Off=mean(Perc.Days.Off),
-         MED_Perc.Days.Off=median(Perc.Days.Off),
-         TOT_Perc.Days.Off=(sum(Days.Off)/sum(Days))) %>% 
-  glimpse()
-  #qplot(data=.,
-  #      geom = "histogram",
-  #      x = Perc.Days.Off,
-  #      xlim = c(-0.05, 1.05),
-  #      binwidth = 0.025)
-)
+#!@!# suppressWarnings(
+#!@!# DF.tc %>% 
+#!@!#   group_by(Person.ID) %>% 
+#!@!#   summarize(.groups="drop_last",
+#!@!#             Days=n(),
+#!@!#             Days.Off=sum(Day.Off),
+#!@!#             Perc.Days.Off=Days.Off/Days) %>% 
+#!@!#   ungroup() %>% 
+#!@!#   summarize(AVG_Perc.Days.Off=mean(Perc.Days.Off),
+#!@!#          MED_Perc.Days.Off=median(Perc.Days.Off),
+#!@!#          TOT_Perc.Days.Off=(sum(Days.Off)/sum(Days)))
+#!@!#   #qplot(data=.,
+#!@!#   #      geom = "histogram",
+#!@!#   #      x = Perc.Days.Off,
+#!@!#   #      xlim = c(-0.05, 1.05),
+#!@!#   #      binwidth = 0.025)
+#!@!# )
 
 
 DF.tc<-DF.tc %>% 
