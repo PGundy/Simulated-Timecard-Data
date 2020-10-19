@@ -1,7 +1,7 @@
 
 
 # Inputs & Parameters ------------------------------------------------------------------------------
-Number.Of.Emps__<-400
+Number.Of.Emps__<-100
 Filing.Date<-ymd("2019-12-06") ## Implying SOL 4yr is 2015-12-06
 Date.Sim.Start__<-(Filing.Date-years(4)-days(30*8))
 Plot.Status.TRUE_FALSE__<-FALSE
