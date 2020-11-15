@@ -1,7 +1,7 @@
 
 
 # Inputs & Parameters ------------------------------------------------------------------------------
-Number.Of.Emps__<-100
+Number.Of.Emps__<-113
 Filing.Date<-ymd("2019-12-06") ## Implying SOL 4yr is 2015-12-06
 Date.Sim.Start__<-(Filing.Date-years(4)-days(30*8))
 Plot.Status.TRUE_FALSE__<-FALSE
@@ -28,16 +28,16 @@ summary(Days.Employed__)
 
 # Build Census -------------------------------------------------------------------------------------
 
-Employee.Census<-data.frame(
+Person.Census<-data.frame(
   stringsAsFactors = FALSE,
   Person.ID = Person.ID.Vector__,
   Date.Sim.Start=Date.Sim.Start__,
   Hire.Date.Jump.Start=Hire.Date.Jump.Start__,
   Days.Employed=Days.Employed__ )
 
-#!@!# Employee.Census %>% glimpse()
+#!@!# Person.Census %>% glimpse()
 
-Employee.Census<-Employee.Census %>% 
+Person.Census<-Person.Census %>% 
   mutate(Hire.Date=(Date.Sim.Start+days(Hire.Date.Jump.Start)),
          Hire.Date=ifelse(Hire.Date<(Filing.Date-years(4)), 
                           paste((Filing.Date-years(4))), 
@@ -60,15 +60,15 @@ Employee.Census<-Employee.Census %>%
          
          Interval_6Months=as.factor(Actual.Days.Employed%/%182.5) )
 
-Employee.Census<-Employee.Census %>% 
+Person.Census<-Person.Census %>% 
   select(Date.Sim.Start, Hire.Date.Jump.Start, Days.Employed,
          Person.ID, Hire.Date, Term.Date, 
          Actual.Days.Employed, Actual.Days.Employed_ALT, Interval_6Months)
 
-summary(Employee.Census$Actual.Days.Employed)
+summary(Person.Census$Actual.Days.Employed)
 
 
-table(Employee.Census$Term.Date>ymd("2020-09-01"))
+table(Person.Census$Term.Date>ymd("2020-09-01"))
 
 
 
@@ -77,18 +77,18 @@ table(Employee.Census$Term.Date>ymd("2020-09-01"))
 
 if (Plot.Status.TRUE_FALSE__==TRUE){
   
-  qplot(data=Employee.Census, x = Hire.Date, binwidth=14, fill = Interval_6Months)
-  qplot(data=Employee.Census, x = Term.Date, binwidth=14, fill = Interval_6Months)
-  qplot(data=Employee.Census, x= Actual.Days.Employed_ALT, binwidth=14)
+  qplot(data=Person.Census, x = Hire.Date, binwidth=14, fill = Interval_6Months)
+  qplot(data=Person.Census, x = Term.Date, binwidth=14, fill = Interval_6Months)
+  qplot(data=Person.Census, x= Actual.Days.Employed_ALT, binwidth=14)
   
-  qplot(data = Employee.Census,
+  qplot(data = Person.Census,
         x = Hire.Date, 
         y = Actual.Days.Employed_ALT,
         color = Interval_6Months,
         #binwidth=30
         )
   
-  qplot(data=Employee.Census,
+  qplot(data=Person.Census,
         main = "When were people Hired? And how long did they work? \n FACET: if(Active after 2020-09)",
         x = Hire.Date,
         y = Actual.Days.Employed_ALT,
@@ -99,7 +99,7 @@ if (Plot.Status.TRUE_FALSE__==TRUE){
 
 
 # Date Expansion -----------------------------------------------------------------------------------
-DF.tc<-setDT(Employee.Census)[, .(Date = seq(Hire.Date, Term.Date, by = '1 day')), by = Person.ID]
+DF.tc<-setDT(Person.Census)[, .(Date = seq(Hire.Date, Term.Date, by = '1 day')), by = Person.ID]
 
 if (Plot.Status.TRUE_FALSE__==TRUE){
   
@@ -111,7 +111,7 @@ if (Plot.Status.TRUE_FALSE__==TRUE){
     group_by(Year.Month, Year_Color) %>% 
     summarize(Person.ID.Count=n_distinct(Person.ID)) %>% 
   qplot(data=.,
-        main = "Employee Count Monthly",
+        main = "Person Count Monthly",
         x=Year.Month,
         y=Person.ID.Count,
         color=Year_Color)
