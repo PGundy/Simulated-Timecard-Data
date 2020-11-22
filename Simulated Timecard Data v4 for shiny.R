@@ -1,7 +1,7 @@
 
 
 # Inputs & Parameters ------------------------------------------------------------------------------
-Number.Of.Emps__<-113
+Number.Of.Emps__<-117
 Filing.Date<-ymd("2019-12-06") ## Implying SOL 4yr is 2015-12-06
 Date.Sim.Start__<-(Filing.Date-years(4)-days(30*8))
 Plot.Status.TRUE_FALSE__<-FALSE
@@ -248,8 +248,8 @@ tc.TEMP3<-DF.tc %>%
          Out.Actual.dt=Out.Actual.dt3) %>% 
   filter(In.Actual.dt!=Out.Actual.dt)       ##NOTE: This filter drops ~775 0 length .dt3 rows of data!
 
-tc.TEMP<-full_join(tc.TEMP1, tc.TEMP2)
-tc.TEMP<-full_join(tc.TEMP, tc.TEMP3)
+tc.TEMP<-full_join(tc.TEMP1, tc.TEMP2, by = c("Person.ID", "In.Actual.dt", "Out.Actual.dt"))
+tc.TEMP<-full_join(tc.TEMP,  tc.TEMP3, by = c("Person.ID", "In.Actual.dt", "Out.Actual.dt"))
 
 
 tc<-tc.TEMP
