@@ -2,8 +2,8 @@
 
 # Inputs & Parameters ------------------------------------------------------------------------------
 Number.Of.Emps__<-117
-Filing.Date<-ymd("2019-12-06") ## Implying SOL 4yr is 2015-12-06
-Date.Sim.Start__<-(Filing.Date-years(4)-days(30*8))
+Random.Input.Date<-ymd("2019-12-06") ## Implying SOL 4yr is 2015-12-06
+Date.Sim.Start__<-(Random.Input.Date-years(4)-days(30*8))
 Plot.Status.TRUE_FALSE__<-FALSE
 
 
@@ -39,8 +39,8 @@ Person.Census<-data.frame(
 
 Person.Census<-Person.Census %>% 
   mutate(Hire.Date=(Date.Sim.Start+days(Hire.Date.Jump.Start)),
-         Hire.Date=ifelse(Hire.Date<(Filing.Date-years(4)), 
-                          paste((Filing.Date-years(4))), 
+         Hire.Date=ifelse(Hire.Date<(Random.Input.Date-years(4)), 
+                          paste((Random.Input.Date-years(4))), 
                           paste(Hire.Date)),
          Hire.Date=ymd(Hire.Date),
          
