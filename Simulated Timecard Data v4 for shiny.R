@@ -232,6 +232,8 @@ DF.tc<-DF.tc %>%
 
 
 
+# Assemble -----------------------------------------------------------------------------------------
+
 tc.TEMP1<-DF.tc %>% 
   select(Person.ID, contains("dt1")) %>% 
   rename(In.Actual.dt=In.Actual.dt1,
@@ -252,7 +254,10 @@ tc.TEMP<-full_join(tc.TEMP1, tc.TEMP2, by = c("Person.ID", "In.Actual.dt", "Out.
 tc.TEMP<-full_join(tc.TEMP,  tc.TEMP3, by = c("Person.ID", "In.Actual.dt", "Out.Actual.dt"))
 
 
-#tc<-tc.TEMP
+
+# Final Filter & Cleanup -----------------------------------------------------------------------------
+tc.TEMP<-tc.TEMP %>% filter(date(Out.Actual.dt)<=Sys.Date())
+
 rm(list=str_subset(ls(), "^tc.TEMP\\d|^DF.tc$|__$") )
 
 
