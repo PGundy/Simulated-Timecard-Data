@@ -252,8 +252,9 @@ tc.TEMP<-full_join(tc.TEMP1, tc.TEMP2, by = c("Person.ID", "In.Actual.dt", "Out.
 tc.TEMP<-full_join(tc.TEMP,  tc.TEMP3, by = c("Person.ID", "In.Actual.dt", "Out.Actual.dt"))
 
 
-tc<-tc.TEMP
-rm(list=str_subset(ls(), "^tc.TEMP|^DF.tc$|__$") )
+#tc<-tc.TEMP
+#rm(list=str_subset(ls(), "^tc.TEMP|^DF.tc$|__$") )
+rm(list=str_subset(ls(), "^DF.tc$|__$") )
 
 
 
